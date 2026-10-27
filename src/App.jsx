@@ -3,15 +3,15 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout";
 import { JobsProvider } from "./context/JobsContext";
 
-import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import Applications from "./pages/Applications";
-import Kanban from "./pages/Kanban";
-import CalendarPage from "./pages/Calendar";
-import Analytics from "./pages/Analytics";
-import Companies from "./pages/Companies";
-import Profile from "./pages/Profile";
-import SettingsPage from "./pages/Settings";
+import Login from "./Pages/Login";
+import Dashboard from "./Pages/Dashboard";
+import Applications from "./Pages/Applications";
+import Kanban from "./Pages/Kanban";
+import CalendarPage from "./Pages/Calendar";
+import Analytics from "./Pages/Analytics";
+import Companies from "./Pages/Companies";
+import Profile from "./Pages/Profile";
+import SettingsPage from "./Pages/Settings";
 
 // Protect pages that require login
 function ProtectedLayout() {
