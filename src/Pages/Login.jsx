@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import {
   Briefcase,
   CheckCircle2,
@@ -212,6 +212,15 @@ export default function Login() {
           >
             Sign in
           </button>
+          <p className="muted" style={{ textAlign: "center" }}>
+  Don't have an account?{" "}
+  <Link
+    to="/signup"
+    style={{ color: "#5b50d6", fontWeight: 700 }}
+  >
+    Sign up
+  </Link>
+</p>
 
           <p className="fine-print">
             Demo login: use any valid email address

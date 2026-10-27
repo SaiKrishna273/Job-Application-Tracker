@@ -12,6 +12,7 @@ import Analytics from "./Pages/Analytics";
 import Companies from "./Pages/Companies";
 import Profile from "./Pages/Profile";
 import SettingsPage from "./Pages/Settings";
+import Signup from "./Pages/Signup";
 
 // Protect pages that require login
 function ProtectedLayout() {
@@ -30,6 +31,7 @@ export default function App() {
           path="/login"
           element={<Login />}
         />
+        <Route path="/signup" element={<Signup />} />
 
         {/* Protected pages */}
         <Route element={<ProtectedLayout />}>
