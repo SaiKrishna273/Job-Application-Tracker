@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import {
   NavLink,
@@ -68,12 +69,22 @@ export default function Layout() {
 
   const navigate = useNavigate();
 
-  const userEmail =
-    localStorage.getItem("jobpilot-demo-user") || "Demo User";
+  // Get logged-in user details
+  const storedUser = localStorage.getItem("jobpilot-user");
 
-  const displayName = userEmail.includes("@")
-    ? userEmail.split("@")[0]
-    : userEmail;
+  let user = {};
+
+  try {
+    user = storedUser ? JSON.parse(storedUser) : {};
+  } catch {
+    user = {};
+  }
+
+  const displayName =
+    user.full_name ||
+    user.name ||
+    user.email?.split("@")[0] ||
+    "Job Seeker";
 
   const initials = displayName
     .split(/[._\s-]+/)
@@ -82,15 +93,17 @@ export default function Layout() {
     .map((word) => word[0].toUpperCase())
     .join("");
 
-  // Close the mobile sidebar
   const closeSidebar = () => {
     setSidebarOpen(false);
   };
 
-  // Handle logout
+  // Logout
   const handleLogout = () => {
-    localStorage.removeItem("jobpilot-demo-user");
+    localStorage.removeItem("jobpilot-token");
+    localStorage.removeItem("jobpilot-user");
+
     closeSidebar();
+
     navigate("/login", { replace: true });
   };
 
@@ -142,7 +155,6 @@ export default function Layout() {
                 }
               >
                 <Icon size={18} strokeWidth={1.8} />
-
                 <span>{item.label}</span>
               </NavLink>
             );
@@ -152,7 +164,7 @@ export default function Layout() {
         {/* User information and logout */}
         <div className="sidebar-bottom">
           <div className="avatar">
-            {initials || "D"}
+            {initials || "J"}
           </div>
 
           <div className="user-mini">
@@ -181,9 +193,7 @@ export default function Layout() {
             type="button"
             className="icon-button"
             aria-label={
-              sidebarOpen
-                ? "Close menu"
-                : "Open menu"
+              sidebarOpen ? "Close menu" : "Open menu"
             }
             onClick={() =>
               setSidebarOpen((previous) => !previous)
@@ -209,7 +219,7 @@ export default function Layout() {
             className="avatar"
             aria-label="Open profile"
           >
-            {initials || "D"}
+            {initials || "J"}
           </NavLink>
         </header>
 

@@ -1,5 +1,6 @@
+
 import { useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Briefcase,
   CheckCircle2,
@@ -8,6 +9,8 @@ import {
   TrendingUp
 } from "lucide-react";
 
+import API from "../services/api";
+
 export default function Login() {
   const navigate = useNavigate();
 
@@ -15,29 +18,19 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  // If already logged in, open the dashboard
-  const existingUser = localStorage.getItem(
-    "jobpilot-demo-user"
-  );
-
-  if (existingUser) {
-    return <Navigate to="/" replace />;
-  }
-
-  // Handle demo login
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
     setError("");
 
-    const cleanEmail = email.trim();
+    const cleanEmail = email.trim().toLowerCase();
 
     if (!cleanEmail || !password) {
       setError("Please enter your email and password.");
       return;
     }
 
-    // Basic email validation
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!emailPattern.test(cleanEmail)) {
@@ -45,18 +38,50 @@ export default function Login() {
       return;
     }
 
-    // Demo authentication only
     try {
+      setLoading(true);
+
+      const response = await API.post("/login", {
+        email: cleanEmail,
+        password: password
+      });
+
+      const { token, user } = response.data;
+
+      if (!token || !user) {
+        setError("Invalid server response. Please try again.");
+        return;
+      }
+
+      // Save authentication details
+      localStorage.setItem("jobpilot-token", token);
       localStorage.setItem(
-        "jobpilot-demo-user",
-        cleanEmail
+        "jobpilot-user",
+        JSON.stringify(user)
       );
 
-      navigate("/", { replace: true });
+      // Remove old demo authentication
+     localStorage.removeItem("jobpilot-demo-user");
+
+// Notify JobsContext that login was successful
+window.dispatchEvent(
+  new Event("jobpilot-auth-changed")
+);
+
+navigate("/", { replace: true });
+
     } catch (err) {
-      setError(
-        "Unable to sign in. Please check your browser storage settings."
-      );
+      if (err.response) {
+        setError(
+          err.response.data.error || "Login failed."
+        );
+      } else {
+        setError(
+          "Cannot connect to server. Please check your Flask backend."
+        );
+      }
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -209,22 +234,19 @@ export default function Login() {
           <button
             className="button button-primary button-wide"
             type="submit"
+            disabled={loading}
           >
-            Sign in
+            {loading ? "Signing in..." : "Sign in"}
           </button>
-          <p className="muted" style={{ textAlign: "center" }}>
-  Don't have an account?{" "}
-  <Link
-    to="/signup"
-    style={{ color: "#5b50d6", fontWeight: 700 }}
-  >
-    Sign up
-  </Link>
-</p>
 
-          <p className="fine-print">
-            Demo login: use any valid email address
-            and a non-empty password.
+          <p className="muted" style={{ textAlign: "center" }}>
+            Don't have an account?{" "}
+            <Link
+              to="/signup"
+              style={{ color: "#5b50d6", fontWeight: 700 }}
+            >
+              Sign up
+            </Link>
           </p>
 
           <p className="fine-print">

@@ -16,6 +16,7 @@ import {
 
 import { Link } from "react-router-dom";
 import { useJobs } from "../context/JobsContext";
+import API from "../services/api";
 
 const SETTINGS_KEY = "jobpilot-settings";
 const PROFILE_KEY = "jobpilot-profile";
@@ -24,7 +25,7 @@ const PROFILE_KEY = "jobpilot-profile";
 function getInitialSettings() {
   const defaults = {
     compactLayout: false,
-    theme: "light"
+    theme: "dark"
   };
 
   try {
@@ -39,7 +40,7 @@ function getInitialSettings() {
 }
 
 export default function SettingsPage() {
-  const { jobs, clearJobs } = useJobs();
+ const { jobs, deleteJob } = useJobs();
 
   const [settings, setSettings] = useState(
     getInitialSettings
@@ -103,107 +104,90 @@ export default function SettingsPage() {
   }
 
   // Export applications and profile as JSON
-  function handleExport() {
-    try {
-      let profile = null;
+  
+async function handleExport() {
+  try {
+    setError("");
+    setMessage("");
 
-      const savedProfile =
-        localStorage.getItem(PROFILE_KEY);
+    // Fetch profile from MySQL
+    const response = await API.get("/profile");
+    const profile = response.data.profile;
 
-      if (savedProfile) {
-        try {
-          profile = JSON.parse(savedProfile);
-        } catch {
-          profile = null;
-        }
-      }
+    // Prepare backup
+    const backup = {
+      application: "JobPilot",
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      profile,
+      applications: jobs
+    };
 
-      const backup = {
-        application: "JobPilot",
-        version: 1,
-        exportedAt: new Date().toISOString(),
-        profile,
-        applications: jobs
-      };
-
-      const blob = new Blob(
-        [JSON.stringify(backup, null, 2)],
-        { type: "application/json" }
-      );
-
-      const url = URL.createObjectURL(blob);
-      const downloadLink =
-        document.createElement("a");
-
-      downloadLink.href = url;
-
-      downloadLink.download =
-        `jobpilot-backup-${new Date()
-          .toISOString()
-          .slice(0, 10)}.json`;
-
-      document.body.appendChild(downloadLink);
-      downloadLink.click();
-      downloadLink.remove();
-
-      window.setTimeout(() => {
-        URL.revokeObjectURL(url);
-      }, 1000);
-
-      setMessage(
-        "Your backup download has started."
-      );
-
-      setError("");
-    } catch (exportError) {
-      console.error(
-        "Export failed:",
-        exportError
-      );
-
-      setError("Unable to export your data.");
-      setMessage("");
-    }
-  }
-
-  // Clear all job applications
-  function handleClearApplications() {
-    if (jobs.length === 0) {
-      setMessage(
-        "There are no applications to clear."
-      );
-
-      setError("");
-      return;
-    }
-
-    const confirmed = window.confirm(
-      `Delete all ${jobs.length} job applications? This action cannot be undone.`
+    // Create JSON file
+    const blob = new Blob(
+      [JSON.stringify(backup, null, 2)],
+      { type: "application/json" }
     );
 
-    if (!confirmed) return;
+    const url = URL.createObjectURL(blob);
+    const downloadLink = document.createElement("a");
 
-    try {
-      clearJobs();
+    downloadLink.href = url;
+    downloadLink.download =
+      `jobpilot-backup-${new Date()
+        .toISOString()
+        .slice(0, 10)}.json`;
 
-      setMessage(
-        "All job applications have been deleted."
-      );
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    downloadLink.remove();
 
-      setError("");
-    } catch (clearError) {
-      console.error(
-        "Unable to clear applications:",
-        clearError
-      );
+    URL.revokeObjectURL(url);
 
-      setError(
-        "Unable to clear your applications."
-      );
+    setMessage("Your backup download has started!");
 
-      setMessage("");
-    }
+  } catch (exportError) {
+    console.error("Export failed:", exportError);
+    setError("Unable to export your data.");
   }
+}
+
+
+
+async function handleClearApplications() {
+  if (jobs.length === 0) {
+    setMessage("There are no applications to clear.");
+    setError("");
+    return;
+  }
+
+  const confirmed = window.confirm(
+    `Delete all ${jobs.length} job applications? This action cannot be undone.`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    setError("");
+    setMessage("");
+
+    await Promise.all(
+      jobs.map((job) => deleteJob(job.id))
+    );
+
+    setMessage(
+      "All job applications have been deleted successfully."
+    );
+
+  } catch (clearError) {
+    console.error("Unable to clear applications:", clearError);
+
+    setError(
+      "Some applications could not be deleted. Please refresh and check your data."
+    );
+  }
+}
+
 
   return (
     <div className="page-stack">

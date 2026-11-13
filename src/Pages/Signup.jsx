@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -6,6 +7,8 @@ import {
   Mail,
   LockKeyhole
 } from "lucide-react";
+
+import API from "../services/api";
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -18,6 +21,7 @@ export default function Signup() {
   });
 
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -30,7 +34,7 @@ export default function Signup() {
     setError("");
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
 
     const name = form.name.trim();
@@ -41,8 +45,8 @@ export default function Signup() {
       return;
     }
 
-    if (form.password.length < 6) {
-      setError("Password must contain at least 6 characters.");
+    if (form.password.length < 8) {
+      setError("Password must contain at least 8 characters.");
       return;
     }
 
@@ -51,29 +55,39 @@ export default function Signup() {
       return;
     }
 
-    // Demo registration only: do not store the password.
-    localStorage.setItem("jobpilot-registered-email", email);
+    try {
+      setLoading(true);
+      setError("");
 
-    localStorage.setItem(
-      "jobpilot-profile",
-      JSON.stringify({
-        name,
-        email,
-        targetRole: "React Developer",
-        location: "",
-        linkedin: "",
-        portfolio: "",
-        about: ""
-      })
-    );
+      const response = await API.post("/register", {
+        full_name: name,
+        email: email,
+        password: form.password
+      });
 
-    // Ensure the user sees the login page after registration.
-    localStorage.removeItem("jobpilot-demo-user");
+      if (response.status === 201) {
+        navigate("/login", {
+          replace: true,
+          state: {
+            registered: true,
+            email: email
+          }
+        });
+      }
 
-    navigate("/login", {
-      replace: true,
-      state: { registered: true, email }
-    });
+    } catch (err) {
+      if (err.response) {
+        setError(
+          err.response.data.error || "Registration failed."
+        );
+      } else {
+        setError(
+          "Cannot connect to server. Please check your Flask backend."
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -177,12 +191,12 @@ export default function Signup() {
               <input
                 name="password"
                 type="password"
-                placeholder="At least 6 characters"
+                placeholder="At least 8 characters"
                 value={form.password}
                 onChange={handleChange}
                 autoComplete="new-password"
                 style={{ paddingLeft: 38 }}
-                minLength={6}
+                minLength={8}
                 required
               />
             </div>
@@ -210,8 +224,9 @@ export default function Signup() {
           <button
             type="submit"
             className="button button-primary button-wide"
+            disabled={loading}
           >
-            Create Account
+            {loading ? "Creating Account..." : "Create Account"}
           </button>
 
           <p className="muted" style={{ textAlign: "center" }}>
@@ -225,8 +240,8 @@ export default function Signup() {
           </p>
 
           <p className="fine-print">
-            Demo registration. This version does not create a
-            secure account on a server.
+            Your account details are securely registered
+            with the JobPilot backend.
           </p>
         </form>
       </section>

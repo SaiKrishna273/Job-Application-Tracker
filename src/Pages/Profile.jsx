@@ -1,4 +1,5 @@
-import { useState } from "react";
+import API from "../services/api";
+import { useState, useEffect } from "react";
 import {
   UserRound,
   Save,
@@ -11,53 +12,71 @@ import {
 
 const PROFILE_STORAGE_KEY = "jobpilot-profile";
 
-function getInitialProfile() {
-  const loggedInEmail =
-    localStorage.getItem("jobpilot-demo-user") || "";
 
-  const defaultProfile = {
-    name: "",
-    email: loggedInEmail,
-    targetRole: "React Developer",
+function getInitialProfile() {
+  const storedUser = localStorage.getItem("jobpilot-user");
+
+  let user = {};
+
+  try {
+    user = storedUser ? JSON.parse(storedUser) : {};
+  } catch (error) {
+    console.error("Unable to read user:", error);
+  }
+
+  return {
+    name: user.full_name || "",
+    email: user.email || "",
+    targetRole: "",
     location: "",
     linkedin: "",
     portfolio: "",
     about: ""
   };
-
-  try {
-    const savedProfile = localStorage.getItem(
-      PROFILE_STORAGE_KEY
-    );
-
-    if (savedProfile) {
-      return {
-        ...defaultProfile,
-        ...JSON.parse(savedProfile)
-      };
-    }
-  } catch (error) {
-    console.error("Unable to load profile:", error);
-  }
-
-  return defaultProfile;
 }
 
+
+
 export default function Profile() {
-  const [profile, setProfile] = useState(
-    getInitialProfile
-  );
-
+  const [profile, setProfile] = useState(getInitialProfile);
   const [message, setMessage] = useState("");
-
   const [saveError, setSaveError] = useState("");
 
-  // Update profile fields
+  // FETCH PROFILE FROM MYSQL
+  useEffect(() => {
+    async function fetchProfile() {
+      try {
+        const response = await API.get("/profile");
+        const data = response.data.profile;
+
+        setProfile({
+          name: data.full_name || "",
+          email: data.email || "",
+          targetRole: data.target_role || "",
+          location: data.preferred_location || "",
+          linkedin: data.linkedin_url || "",
+          portfolio: data.portfolio_url || "",
+          about: data.professional_summary || ""
+        });
+
+      } catch (error) {
+        console.error("Unable to fetch profile:", error);
+        setSaveError(
+          error.response?.data?.error || "Unable to load profile."
+        );
+      }
+    }
+
+    fetchProfile();
+  }, []);
+
+  // Your handleChange function comes here
+
   function handleChange(event) {
     const { name, value } = event.target;
 
-    setProfile((previousProfile) => ({
-      ...previousProfile,
+    setProfile((previous) => ({
+      ...previous,
       [name]: value
     }));
 
@@ -65,40 +84,54 @@ export default function Profile() {
     setSaveError("");
   }
 
-  // Save profile in LocalStorage
-  function handleSubmit(event) {
-    event.preventDefault();
+  async function handleSubmit(event) {
+  event.preventDefault();
 
-    setMessage("");
-    setSaveError("");
+  setMessage("");
+  setSaveError("");
 
-    const cleanProfile = {
-      ...profile,
-      name: profile.name.trim(),
-      email: profile.email.trim(),
-      targetRole: profile.targetRole.trim(),
-      location: profile.location.trim(),
-      linkedin: profile.linkedin.trim(),
-      portfolio: profile.portfolio.trim(),
-      about: profile.about.trim()
-    };
+  const cleanProfile = {
+    full_name: profile.name.trim(),
+    target_role: profile.targetRole.trim(),
+    preferred_location: profile.location.trim(),
+    linkedin_url: profile.linkedin.trim(),
+    portfolio_url: profile.portfolio.trim(),
+    professional_summary: profile.about.trim()
+  };
 
-    try {
-      localStorage.setItem(
-        PROFILE_STORAGE_KEY,
-        JSON.stringify(cleanProfile)
-      );
+  try {
+    const response = await API.put("/profile", cleanProfile);
 
-      setProfile(cleanProfile);
-      setMessage("Profile saved successfully!");
-    } catch (error) {
-      console.error("Unable to save profile:", error);
+    setProfile((previous) => ({
+      ...previous,
+      name: cleanProfile.full_name
+    }));
 
-      setSaveError(
-        "Unable to save your profile. Check your browser storage."
-      );
-    }
+    const storedUser = JSON.parse(
+      localStorage.getItem("jobpilot-user") || "{}"
+    );
+
+    localStorage.setItem(
+      "jobpilot-user",
+      JSON.stringify({
+        ...storedUser,
+        full_name: cleanProfile.full_name
+      })
+    );
+
+    setMessage(response.data.message || "Profile updated successfully!");
+  } catch (error) {
+    console.error("Profile update error:", error);
+
+    setSaveError(
+      error.response?.data?.error || "Unable to update profile."
+    );
   }
+}
+  // Keep your existing getInitials() function
+  // and return (...) JSX below this line.
+
+
 
   // Generate avatar initials
   function getInitials() {
@@ -366,18 +399,21 @@ export default function Profile() {
 
         </div>
       </form>
+    
+
+
 
       {/* Storage information */}
       <div className="notice">
-        <strong>About your profile data</strong>
+  <strong>About your profile data</strong>
 
-        <p>
-          Your profile is stored locally in this browser.
-          It is not uploaded to a server or automatically
-          synchronized across devices.
-        </p>
-      </div>
+  <p>
+    Your profile is securely stored in your JobPilot
+    database and associated with your account.
+  </p>
+</div>
 
     </div>
   );
 }
+
