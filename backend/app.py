@@ -21,6 +21,7 @@ CORS(app)
 
 app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
 
+
 # Database connection
 def get_db_connection():
     return mysql.connector.connect(
@@ -28,7 +29,10 @@ def get_db_connection():
         user=os.getenv("DB_USER"),
         password=os.getenv("DB_PASSWORD"),
         database=os.getenv("DB_NAME"),
-        connection_timeout=5,
+        port=int(os.getenv("DB_PORT", 4000)),
+        connection_timeout=10,
+        ssl_verify_cert=True,
+        ssl_verify_identity=True,
         use_pure=True
     )
 
